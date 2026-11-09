@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import joblib
+from huggingface_hub import hf_hub_download
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -10,34 +11,65 @@ from pydantic import BaseModel, Field
 app = FastAPI(
     title="GraphSecure API",
     description="Source code vulnerability detection research backend",
-    version="1.1.0"
+    version="1.2.0"
 )
 
-# Project root directory
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Trained model location
-MODEL_PATH = (
+LOCAL_MODEL_PATH = (
     PROJECT_ROOT / "ml" / "models" / "baseline_model.joblib"
 )
 
-# Cache the loaded model
 _model_artifact = None
 
 
 def get_model():
     global _model_artifact
 
-    if _model_artifact is None:
-        if not MODEL_PATH.exists():
+    if _model_artifact is not None:
+        return _model_artifact
+
+    model_path = LOCAL_MODEL_PATH
+
+    # If local model is unavailable, download it from Hugging Face.
+    if not model_path.exists():
+        model_url = os.getenv("MODEL_URL")
+        hf_token = os.getenv("HF_TOKEN")
+
+        if not model_url or not hf_token:
             return None
 
-        _model_artifact = joblib.load(MODEL_PATH)
+        try:
+            expected_path = (
+                "https://huggingface.co/"
+                "sameera-ch/graphsecure-baseline-model/"
+                "resolve/main/baseline_model.joblib"
+            )
 
-    return _model_artifact
+            if model_url != expected_path:
+                raise ValueError("Unexpected model repository URL.")
+
+            model_path = Path(
+                hf_hub_download(
+                    repo_id="sameera-ch/graphsecure-baseline-model",
+                    filename="baseline_model.joblib",
+                    token=hf_token,
+                    repo_type="model"
+                )
+            )
+
+        except Exception as error:
+            print(f"Model download failed: {error}")
+            return None
+
+    try:
+        _model_artifact = joblib.load(model_path)
+        return _model_artifact
+    except Exception as error:
+        print(f"Model loading failed: {error}")
+        return None
 
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -88,7 +120,6 @@ def health_check():
 
 @app.post("/analyze")
 def analyze_code(request: AnalysisRequest):
-
     source_code = request.source_code.strip()
 
     if not source_code:
@@ -102,27 +133,17 @@ def analyze_code(request: AnalysisRequest):
     if artifact is None:
         raise HTTPException(
             status_code=503,
-            detail=(
-                "The trained GraphSecure model is not available. "
-                "Please configure the model artifact."
-            )
+            detail="The trained GraphSecure model is unavailable."
         )
 
     try:
         model = artifact["model"]
-
-        prediction = int(
-            model.predict([source_code])[0]
-        )
-
-        probabilities = model.predict_proba(
-            [source_code]
-        )[0]
+        prediction = int(model.predict([source_code])[0])
+        probabilities = model.predict_proba([source_code])[0]
 
         prediction_name = (
             "Vulnerable" if prediction == 1 else "Safe"
         )
-
         score = float(probabilities[prediction])
 
     except Exception as error:
@@ -136,19 +157,15 @@ def analyze_code(request: AnalysisRequest):
         "input_received": True,
         "characters": len(request.source_code),
         "lines": len(request.source_code.splitlines()),
-
         "analysis_status": "completed",
         "model_status": "connected",
-
         "prediction": prediction_name,
         "prediction_label": prediction,
         "model_score": round(score, 4),
-
         "model_name": artifact.get(
             "model_name",
             "Unknown model"
         ),
-
         "message": (
             "Experimental baseline prediction completed. "
             "This result is not a confirmed security verdict."

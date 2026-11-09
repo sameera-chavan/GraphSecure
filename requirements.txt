@@ -4,3 +4,8 @@ python-multipart
 pydantic
 pytest
 httpx
+
+huggingface_hub
+
+scikit-learn
+joblib
