@@ -17,7 +17,9 @@ function App() {
 
     if (!file) return;
 
-    const allowedExtensions = [".c", ".cpp", ".h", ".hpp", ".java", ".py"];
+    const allowedExtensions = [
+      ".c", ".cpp", ".h", ".hpp", ".java", ".py"
+    ];
 
     const validFile = allowedExtensions.some((extension) =>
       file.name.toLowerCase().endsWith(extension)
@@ -60,7 +62,7 @@ function App() {
 
     setLoading(true);
     setAnalysisResult(null);
-    setMessage("Sending source code to GraphSecure backend...");
+    setMessage("Analyzing source code using GraphSecure ML model...");
 
     try {
       const response = await fetch(`${API_URL}/analyze`, {
@@ -85,12 +87,10 @@ function App() {
       setAnalysisResult(result);
 
       setMessage(
-        "Source code successfully received by GraphSecure backend."
+        "GraphSecure experimental ML analysis completed successfully."
       );
     } catch (error) {
-      setMessage(
-        "Backend connection failed: " + error.message
-      );
+      setMessage("Analysis failed: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -102,6 +102,17 @@ function App() {
     setMessage("");
     setAnalysisResult(null);
   }
+
+  const modelConnected =
+    analysisResult?.model_status === "connected";
+
+  const prediction =
+    analysisResult?.prediction;
+
+  const score =
+    typeof analysisResult?.model_score === "number"
+      ? (analysisResult.model_score * 100).toFixed(2)
+      : null;
 
   return (
     <div className="app-container">
@@ -137,7 +148,7 @@ function App() {
           <div className="stat-card">
             <span className="stat-label">Analysis Engine</span>
             <h3>API Connected</h3>
-            <p>Backend communication interface</p>
+            <p>FastAPI backend</p>
           </div>
 
           <div className="stat-card">
@@ -148,8 +159,16 @@ function App() {
 
           <div className="stat-card">
             <span className="stat-label">AI Model</span>
-            <h3>Not Connected</h3>
-            <p>Research model implementation pending</p>
+            <h3>
+              {modelConnected
+                ? "Baseline Connected"
+                : "Awaiting Analysis"}
+            </h3>
+            <p>
+              {modelConnected
+                ? "TF-IDF + Logistic Regression"
+                : "Experimental ML classifier"}
+            </p>
           </div>
         </section>
 
@@ -159,6 +178,7 @@ function App() {
               <p className="eyebrow">ANALYSIS WORKSPACE</p>
               <h2>Submit Source Code</h2>
             </div>
+
             <span className="file-type-label">
               C · C++ · Java · Python
             </span>
@@ -216,7 +236,7 @@ int main() {
               onClick={prepareAnalysis}
               disabled={loading}
             >
-              {loading ? "Sending..." : "Submit to Backend"}
+              {loading ? "Analyzing..." : "Analyze Source Code"}
             </button>
 
             <button
@@ -237,8 +257,9 @@ int main() {
 
           {analysisResult && (
             <section className="result-panel">
-              <p className="eyebrow">BACKEND RESPONSE</p>
-              <h3>Source Code Received Successfully</h3>
+              <p className="eyebrow">GRAPHSECURE ML RESULTS</p>
+
+              <h3>Vulnerability Analysis Report</h3>
 
               <div className="result-grid">
                 <div>
@@ -269,16 +290,65 @@ int main() {
                   <span>Model Status</span>
                   <strong>{analysisResult.model_status}</strong>
                 </div>
+
+                <div>
+                  <span>Analysis Status</span>
+                  <strong>{analysisResult.analysis_status}</strong>
+                </div>
               </div>
+
+              {prediction && (
+                <div className="prediction-card">
+                  <p className="eyebrow">MODEL PREDICTION</p>
+
+                  <h2
+                    style={{
+                      color:
+                        prediction === "Vulnerable"
+                          ? "#ef4444"
+                          : "#16a34a",
+                    }}
+                  >
+                    {prediction}
+                  </h2>
+
+                  <div className="prediction-details">
+                    <div>
+                      <span>Prediction Label</span>
+                      <strong>
+                        {analysisResult.prediction_label}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Model Score</span>
+                      <strong>
+                        {score !== null ? `${score}%` : "Unavailable"}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Model</span>
+                      <strong>
+                        {analysisResult.model_name}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <p className="result-note">
                 {analysisResult.message}
               </p>
 
               <p className="disclaimer">
-                This confirms backend data reception only.
-                No actual vulnerability prediction has been
-                performed yet.
+                Research prototype: This is an experimental
+                TF-IDF + Logistic Regression baseline trained
+                on the Devign dataset. Its predictions are not
+                confirmed security verdicts. The model does not
+                yet implement the proposed HGT architecture,
+                graph-based analysis, or counterfactual explanations.
+                Do not use this result alone to make security decisions.
               </p>
             </section>
           )}
@@ -309,9 +379,7 @@ int main() {
         </section>
 
         <footer className="footer">
-          <p>
-            GraphSecure | M.Tech Research Project
-          </p>
+          <p>GraphSecure | M.Tech Research Project</p>
           <p>
             Counterfactual-Explainable Multi-View
             Heterogeneous Graph Transformer

@@ -25,3 +25,7 @@ models/checkpoints/
 .idea/
 .DS_Store
 Thumbs.db
+
+# GraphSecure ML data and trained artifacts
+ml/data/*.jsonl
+ml/models/*.joblib
