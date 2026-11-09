@@ -33,22 +33,14 @@ def get_model():
 
     # If local model is unavailable, download it from Hugging Face.
     if not model_path.exists():
-        model_url = os.getenv("MODEL_URL")
         hf_token = os.getenv("HF_TOKEN")
 
-        if not model_url or not hf_token:
+        if not hf_token:
+            print("Model download skipped: HF_TOKEN is not configured.")
             return None
 
         try:
-            expected_path = (
-                "https://huggingface.co/"
-                "sameera-ch/graphsecure-baseline-model/"
-                "resolve/main/baseline_model.joblib"
-            )
-
-            if model_url != expected_path:
-                raise ValueError("Unexpected model repository URL.")
-
+            # Download the model from the private Hugging Face repository.
             model_path = Path(
                 hf_hub_download(
                     repo_id="sameera-ch/graphsecure-baseline-model",
