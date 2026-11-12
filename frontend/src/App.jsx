@@ -8,9 +8,14 @@ function App() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [showCounterfactualDemo, setShowCounterfactualDemo] = useState(false);
 
   const API_URL =
-    import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+    (import.meta.env.VITE_API_URL || (
+      import.meta.env.PROD
+        ? "https://graphsecure-api.onrender.com"
+        : "http://127.0.0.1:8000"
+    )).replace(/\/+$/, "");
 
   function handleFileUpload(event) {
     const file = event.target.files?.[0];
@@ -351,6 +356,75 @@ int main() {
                 Do not use this result alone to make security decisions.
               </p>
             </section>
+          )}
+        </section>
+
+        <section className="counterfactual-section">
+          <div className="counterfactual-heading">
+            <div>
+              <p className="eyebrow">EXPLAINABILITY PILOT</p>
+              <h2>Recorded Counterfactual Example</h2>
+              <p className="counterfactual-intro">
+                An offline experiment from the 80-function research pilot.
+                This example is separate from the live source-code analysis above.
+              </p>
+            </div>
+            <span className="counterfactual-status">Joern parse succeeded</span>
+          </div>
+
+          <div className="counterfactual-summary">
+            <div>
+              <span>Sample</span>
+              <strong>qemu_label0_9045</strong>
+            </div>
+            <div>
+              <span>Dataset ground truth</span>
+              <strong>Safe (0)</strong>
+            </div>
+            <div>
+              <span>Before edit</span>
+              <strong className="cf-vulnerable">Vulnerable (1)</strong>
+            </div>
+            <div>
+              <span>After edit</span>
+              <strong className="cf-safe">Safe (0)</strong>
+            </div>
+          </div>
+
+          <div className="counterfactual-edit">
+            <span>Single statement removed in the pilot experiment</span>
+            <pre><code>- a20_mask = 0xffffffff;</code></pre>
+          </div>
+
+          <button
+            type="button"
+            className="counterfactual-toggle"
+            onClick={() => setShowCounterfactualDemo((visible) => !visible)}
+            aria-expanded={showCounterfactualDemo}
+          >
+            {showCounterfactualDemo ? "Hide pilot details" : "Show pilot details"}
+          </button>
+
+          {showCounterfactualDemo && (
+            <div className="counterfactual-details">
+              <p>
+                The pilot TF-IDF classifier changed its prediction from
+                Vulnerable to Safe after this statement was removed. The
+                dataset label for this sample is Safe, so the original
+                prediction was a false positive.
+              </p>
+              <p>
+                Joern successfully parsed the modified source. This confirms
+                parser acceptance only; it does not establish semantic
+                equivalence, behavioral correctness, or security.
+              </p>
+              <p className="counterfactual-warning">
+                This is a saved, sample-specific research demonstration—not
+                a live counterfactual generated for the code currently in
+                the editor. The live Analyze endpoint continues to use the
+                baseline classifier.
+              </p>
+            </div>
           )}
         </section>
 

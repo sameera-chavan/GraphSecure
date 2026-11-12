@@ -62,17 +62,22 @@ def get_model():
         return None
 
 
+# FRONTEND_ORIGIN may contain multiple comma-separated exact origins.
+configured_frontend_origins = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        os.getenv(
-            "FRONTEND_ORIGIN",
-            "http://localhost:5173"
-        ),
-    ],
+    allow_origins=configured_frontend_origins,
+    # Permit only this project's Vercel preview deployment hostname pattern.
+    allow_origin_regex=(
+        r"^https://graph-secure-git-[a-z0-9-]+-sameerachavan5-9298s-projects\.vercel\.app$"
+    ),
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
