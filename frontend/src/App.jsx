@@ -11,7 +11,7 @@ function App() {
   const [showCounterfactualDemo, setShowCounterfactualDemo] = useState(false);
 
   const API_URL =
-    import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+    (import.meta.env.VITE_API_URL || "https://graphsecure-api.onrender.com").replace(/\/+$/, "");
 
   function handleFileUpload(event) {
     const file = event.target.files?.[0];
